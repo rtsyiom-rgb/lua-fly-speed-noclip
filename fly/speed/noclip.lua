@@ -1,149 +1,418 @@
 --[[ 
-    GEMINI HUB V1: THE MASTER EDITION (All-in-One)
-    Features:
-    - Speed Bypass (Locked at 20)
-    - Fly Mode (Space/Ctrl)
-    - Noclip (Walk through walls)
-    - Player Scanner (Auto-update list)
-    - Fly To Player (Auto-follow targeted player)
-    Hotkeys: [Insert] to Hide UI, [Q] to Stop FlyTo
+    GEMINI HUB V2: MOBILE TABBED EDITION
+    - Tab 1: Main (Speed, Fly, Noclip)
+    - Tab 2: TP (Auto-Gen Scan, Players)
+    - Key: key_powsnas232-waodKLS
 ]]
 
 local player = game.Players.LocalPlayer
+local pgui = player:WaitForChild("PlayerGui")
 local runService = game:GetService("RunService")
-local uis = game:GetService("UserInputService")
 local players = game:GetService("Players")
 
---// UI Setup
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-local Main = Instance.new("Frame", ScreenGui)
-local Title = Instance.new("TextLabel", Main)
-local SpeedBtn = Instance.new("TextButton", Main)
-local FlyBtn = Instance.new("TextButton", Main)
-local NocBtn = Instance.new("TextButton", Main)
-local TPFrame = Instance.new("ScrollingFrame", Main)
-local UIList = Instance.new("UIListLayout", TPFrame)
+local saveFile = "Gemini_Mobile_V2.txt"
+local CorrectKey = "key_powsnas232-waodKLS"
 
---// UI Styling
-Main.Name = "GeminiMaster_V1"
-Main.Size = UDim2.new(0, 170, 0, 320)
-Main.Position = UDim2.new(0.5, -85, 0.5, -160)
-Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Main.BorderSizePixel = 0
-Main.Active = true
-Main.Draggable = true
+-- ล้าง UI เก่าเพื่อกันปัญหาจอดำ
+if pgui:FindFirstChild("GeminiMobile_UI") then pgui.GeminiMobile_UI:Destroy() end
 
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Title.Text = " GEMINI MASTER V1"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.TextSize = 12
-Title.Font = Enum.Font.SourceSansBold
+local ScreenGui = Instance.new("ScreenGui", pgui)
+ScreenGui.Name = "GeminiMobile_UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local function styleBtn(btn, pos, text)
-    btn.Size = UDim2.new(0.9, 0, 0, 25)
-    btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.SourceSans
+--// ฟังก์ชันสร้างหน้าหลัก (Mobile Optimized)
+local function buildHub()
+    local MainFrame = Instance.new("Frame", ScreenGui)
+    MainFrame.Size = UDim2.new(0, 210, 0, 320)
+    MainFrame.Position = UDim2.new(0.5, 50, 0.5, -160)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true -- ลากย้ายตำแหน่งได้บนจอ
+
+    -- แถบเลือกหน้า (Tab Bar)
+    local TabBar = Instance.new("Frame", MainFrame)
+    TabBar.Size = UDim2.new(1, 0, 0, 35)
+    TabBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+
+    local MainTabBtn = Instance.new("TextButton", TabBar)
+    MainTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    MainTabBtn.Text = "MAIN"
+    MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    MainTabBtn.TextColor3 = Color3.new(1, 1, 1)
+
+    local TPTabBtn = Instance.new("TextButton", TabBar)
+    TPTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    TPTabBtn.Position = UDim2.new(0.5, 0, 0, 0)
+    TPTabBtn.Text = "TP LIST"
+    TPTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    TPTabBtn.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+
+    -- หน้าต่างๆ (Pages)
+    local MainPage = Instance.new("ScrollingFrame", MainFrame)
+    MainPage.Size = UDim2.new(1, 0, 0.88, 0)
+    MainPage.Position = UDim2.new(0, 0, 0.12, 0)
+    MainPage.BackgroundTransparency = 1
+    MainPage.Visible = true
+
+    local TPPage = Instance.new("ScrollingFrame", MainFrame)
+    TPPage.Size = UDim2.new(1, 0, 0.88, 0)
+    TPPage.Position = UDim2.new(0, 0, 0.12, 0)
+    TPPage.BackgroundTransparency = 1
+    TPPage.Visible = false
+
+    local function setupLayout(p)
+        local l = Instance.new("UIListLayout", p)
+        l.Padding = UDim.new(0, 6)
+        l.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        p.ScrollBarThickness = 4
+    end
+    setupLayout(MainPage)
+    setupLayout(TPPage)
+
+    local function makeBtn(txt, parent, callback)
+        local b = Instance.new("TextButton", parent)
+        b.Size = UDim2.new(0.92, 0, 0, 38) -- ขนาดปุ่มใหญ่สำหรับมือถือ
+        b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        b.Text = txt
+        b.TextColor3 = Color3.new(1, 1, 1)
+        b.Font = Enum.Font.SourceSansBold
+        b.TextSize = 16
+        b.BorderSizePixel = 0
+        b.MouseButton1Click:Connect(callback)
+        return b
+    end
+
+    -- [ หน้า 1: ฟีเจอร์หลัก ]
+    local speedOn, flyOn, noclipOn = false, false, false
+    local sBtn = makeBtn("Speed: OFF", MainPage, function() 
+        speedOn = not speedOn 
+        sBtn.Text = "Speed: "..(speedOn and "ON" or "OFF")
+    end)
+    local fBtn = makeBtn("Fly: OFF", MainPage, function() 
+        flyOn = not flyOn 
+        fBtn.Text = "Fly: "..(flyOn and "ON" or "OFF")
+        if not flyOn and player.Character then player.Character.Humanoid.PlatformStand = false end
+    end)
+    local nBtn = makeBtn("Noclip: OFF", MainPage, function() 
+        noclipOn = not noclipOn 
+        nBtn.Text = "Noclip: "..(noclipOn and "ON" or "OFF")
+    end)
+
+    -- [ หน้า 2: ระบบวาร์ป (Auto Scan) ]
+    local function updateTPPage()
+        for _, v in pairs(TPPage:GetChildren()) do if v:IsA("TextButton") or v:IsA("TextLabel") then v:Destroy() end end
+        
+        -- Generator TP
+        local gLab = Instance.new("TextLabel", TPPage)
+        gLab.Size = UDim2.new(1, 0, 0, 25)
+        gLab.Text = "--- GENERATORS ---"
+        gLab.TextColor3 = Color3.fromRGB(100, 150, 255)
+        gLab.BackgroundTransparency = 1
+
+        local genPath = workspace:FindFirstChild("MAPS") and workspace.MAPS:FindFirstChild("GAME MAP") and workspace.MAPS["GAME MAP"]:FindFirstChild("Generators")
+        if genPath then
+            for i, obj in pairs(genPath:GetChildren()) do
+                local pos = obj:IsA("Model") and obj:GetModelCFrame() or obj.CFrame
+                makeBtn("Generator #"..i, TPPage, function()
+                    if player.Character then player.Character.HumanoidRootPart.CFrame = pos * CFrame.new(0, 5, 0) end
+                end)
+            end
+        end
+
+        -- Player TP
+        local pLab = Instance.new("TextLabel", TPPage)
+        pLab.Size = UDim2.new(1, 0, 0, 25)
+        pLab.Text = "--- PLAYERS ---"
+        pLab.TextColor3 = Color3.fromRGB(100, 255, 150)
+        pLab.BackgroundTransparency = 1
+        for _, p in pairs(players:GetPlayers()) do
+            if p ~= player then
+                makeBtn(p.DisplayName, TPPage, function()
+                    if p.Character then player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame end
+                end)
+            end
+        end
+        TPPage.CanvasSize = UDim2.new(0, 0, 0, TPPage.UIListLayout.AbsoluteContentSize.Y + 20)
+    end
+
+    -- สลับหน้า
+    MainTabBtn.MouseButton1Click:Connect(function()
+        MainPage.Visible = true; TPPage.Visible = false
+        MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); TPTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    end)
+    TPTabBtn.MouseButton1Click:Connect(function()
+        MainPage.Visible = false; TPPage.Visible = true
+        updateTPPage()
+        TPTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); MainTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    end)
+
+    -- ระบบควบคุมตัวละคร
+    runService.Stepped:Connect(function()
+        if not player.Character or not player.Character:FindFirstChild("Humanoid") then return end
+        if speedOn and not flyOn then player.Character.Humanoid.WalkSpeed = 17 end
+        if flyOn then
+            player.Character.Humanoid.PlatformStand = true
+            player.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+            local move = player.Character.Humanoid.MoveDirection
+            local cam = workspace.CurrentCamera.CFrame
+            if move.Magnitude > 0 then
+                player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame:Lerp(player.Character.HumanoidRootPart.CFrame + (cam.LookVector * (move.Z * -1) * 1.6) + (cam.RightVector * move.X * 1.6), 0.5)
+            end
+        end
+        if noclipOn then
+            for _, v in pairs(player.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+        end
+    end)
+
+    -- ปุ่มเปิด/ปิดเมนู (G)
+    local Toggle = Instance.new("TextButton", ScreenGui)
+    Toggle.Size = UDim2.new(0, 45, 0, 45)
+    Toggle.Position = UDim2.new(0, 10, 0.5, -22)
+    Toggle.Text = "G"
+    Toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Toggle.TextColor3 = Color3.fromRGB(0, 255, 150)
+    Toggle.ZIndex = 10
+    Toggle.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 end
 
-styleBtn(SpeedBtn, UDim2.new(0.05, 0, 0.12, 0), "Speed (20): OFF")
-styleBtn(FlyBtn, UDim2.new(0.05, 0, 0.22, 0), "Fly Mode: OFF")
-styleBtn(NocBtn, UDim2.new(0.05, 0, 0.32, 0), "Noclip: OFF")
+--// ระบบ Key & Auto Login
+if isfile and isfile(saveFile) and readfile(saveFile) == CorrectKey then
+    buildHub()
+else
+    local KF = Instance.new("Frame", ScreenGui)
+    KF.Size = UDim2.new(0, 240, 0, 150)
+    KF.Position = UDim2.new(0.5, -120, 0.5, -75)
+    KF.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 
-TPFrame.Size = UDim2.new(0.9, 0, 0, 170)
-TPFrame.Position = UDim2.new(0.05, 0, 0.43, 0)
-TPFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-TPFrame.BorderSizePixel = 0
-TPFrame.ScrollBarThickness = 4
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
+    local In = Instance.new("TextBox", KF)
+    In.Size = UDim2.new(0.8, 0, 0, 35)
+    In.Position = UDim2.new(0.1, 0, 0.3, 0)
+    In.PlaceholderText = "Enter Key..."
+    
+    local Sb = Instance.new("TextButton", KF)
+    Sb.Size = UDim2.new(0.8, 0, 0, 40)
+    Sb.Position = UDim2.new(0.1, 0, 0.65, 0)
+    Sb.BackgroundColor3 = Color3.fromRGB(0, 160, 0)
+    Sb.Text = "SUBMIT"
+    Sb.TextColor3 = Color3.new(1, 1, 1)
 
---// Core Variables
-local speedOn, flyOn, noclipOn = false, false, false
-local targetPlayer = nil
-local ws_speed = 20
-local fly_speed = 2
-local flyTo_speed = 2.5
-
---// Core Loop (Heartbeat)
-runService.Heartbeat:Connect(function()
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local root = player.Character.HumanoidRootPart
-    local hum = player.Character:FindFirstChildOfClass("Humanoid")
-    local move = hum.MoveDirection
-
-    -- 1. Fly To Player (Priority)
-    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        hum.PlatformStand = true
-        root.Velocity = Vector3.new(0,0,0)
-        local tRoot = targetPlayer.Character.HumanoidRootPart
-        local dir = (tRoot.Position - root.Position).Unit
-        if (tRoot.Position - root.Position).Magnitude > 6 then
-            root.CFrame = root.CFrame + (dir * flyTo_speed)
-            root.CFrame = CFrame.lookAt(root.Position, tRoot.Position)
+    Sb.MouseButton1Click:Connect(function()
+        if In.Text == CorrectKey then
+            if writefile then writefile(saveFile, CorrectKey) end
+            KF:Destroy(); buildHub()
         end
-        return -- Skip other movement logic while FlyTo is active
+    end)
+end
+--[[ 
+    GEMINI HUB V2: MOBILE TABBED EDITION
+    - Tab 1: Main (Speed, Fly, Noclip)
+    - Tab 2: TP (Auto-Gen Scan, Players)
+    - Key: key_powsnas232-waodKLS
+]]
+
+local player = game.Players.LocalPlayer
+local pgui = player:WaitForChild("PlayerGui")
+local runService = game:GetService("RunService")
+local players = game:GetService("Players")
+
+local saveFile = "Gemini_Mobile_V2.txt"
+local CorrectKey = "key_powsnas232-waodKLS"
+
+-- ล้าง UI เก่าเพื่อกันปัญหาจอดำ
+if pgui:FindFirstChild("GeminiMobile_UI") then pgui.GeminiMobile_UI:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui", pgui)
+ScreenGui.Name = "GeminiMobile_UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+--// ฟังก์ชันสร้างหน้าหลัก (Mobile Optimized)
+local function buildHub()
+    local MainFrame = Instance.new("Frame", ScreenGui)
+    MainFrame.Size = UDim2.new(0, 210, 0, 320)
+    MainFrame.Position = UDim2.new(0.5, 50, 0.5, -160)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true -- ลากย้ายตำแหน่งได้บนจอ
+
+    -- แถบเลือกหน้า (Tab Bar)
+    local TabBar = Instance.new("Frame", MainFrame)
+    TabBar.Size = UDim2.new(1, 0, 0, 35)
+    TabBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+
+    local MainTabBtn = Instance.new("TextButton", TabBar)
+    MainTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    MainTabBtn.Text = "MAIN"
+    MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    MainTabBtn.TextColor3 = Color3.new(1, 1, 1)
+
+    local TPTabBtn = Instance.new("TextButton", TabBar)
+    TPTabBtn.Size = UDim2.new(0.5, 0, 1, 0)
+    TPTabBtn.Position = UDim2.new(0.5, 0, 0, 0)
+    TPTabBtn.Text = "TP LIST"
+    TPTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    TPTabBtn.TextColor3 = Color3.new(0.7, 0.7, 0.7)
+
+    -- หน้าต่างๆ (Pages)
+    local MainPage = Instance.new("ScrollingFrame", MainFrame)
+    MainPage.Size = UDim2.new(1, 0, 0.88, 0)
+    MainPage.Position = UDim2.new(0, 0, 0.12, 0)
+    MainPage.BackgroundTransparency = 1
+    MainPage.Visible = true
+
+    local TPPage = Instance.new("ScrollingFrame", MainFrame)
+    TPPage.Size = UDim2.new(1, 0, 0.88, 0)
+    TPPage.Position = UDim2.new(0, 0, 0.12, 0)
+    TPPage.BackgroundTransparency = 1
+    TPPage.Visible = false
+
+    local function setupLayout(p)
+        local l = Instance.new("UIListLayout", p)
+        l.Padding = UDim.new(0, 6)
+        l.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        p.ScrollBarThickness = 4
+    end
+    setupLayout(MainPage)
+    setupLayout(TPPage)
+
+    local function makeBtn(txt, parent, callback)
+        local b = Instance.new("TextButton", parent)
+        b.Size = UDim2.new(0.92, 0, 0, 38) -- ขนาดปุ่มใหญ่สำหรับมือถือ
+        b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        b.Text = txt
+        b.TextColor3 = Color3.new(1, 1, 1)
+        b.Font = Enum.Font.SourceSansBold
+        b.TextSize = 16
+        b.BorderSizePixel = 0
+        b.MouseButton1Click:Connect(callback)
+        return b
     end
 
-    -- 2. Fly Mode
-    if flyOn then
-        hum.PlatformStand = true
-        root.Velocity = Vector3.new(0, 0, 0)
-        local cam = workspace.CurrentCamera.CFrame
-        local newCF = root.CFrame
-        if move.Magnitude > 0 then
-            newCF = newCF + (cam.LookVector * (move.Z * -1) * fly_speed) + (cam.RightVector * move.X * fly_speed)
+    -- [ หน้า 1: ฟีเจอร์หลัก ]
+    local speedOn, flyOn, noclipOn = false, false, false
+    local sBtn = makeBtn("Speed: OFF", MainPage, function() 
+        speedOn = not speedOn 
+        sBtn.Text = "Speed: "..(speedOn and "ON" or "OFF")
+    end)
+    local fBtn = makeBtn("Fly: OFF", MainPage, function() 
+        flyOn = not flyOn 
+        fBtn.Text = "Fly: "..(flyOn and "ON" or "OFF")
+        if not flyOn and player.Character then player.Character.Humanoid.PlatformStand = false end
+    end)
+    local nBtn = makeBtn("Noclip: OFF", MainPage, function() 
+        noclipOn = not noclipOn 
+        nBtn.Text = "Noclip: "..(noclipOn and "ON" or "OFF")
+    end)
+
+    -- [ หน้า 2: ระบบวาร์ป (Auto Scan) ]
+    local function updateTPPage()
+        for _, v in pairs(TPPage:GetChildren()) do if v:IsA("TextButton") or v:IsA("TextLabel") then v:Destroy() end end
+        
+        -- Generator TP
+        local gLab = Instance.new("TextLabel", TPPage)
+        gLab.Size = UDim2.new(1, 0, 0, 25)
+        gLab.Text = "--- GENERATORS ---"
+        gLab.TextColor3 = Color3.fromRGB(100, 150, 255)
+        gLab.BackgroundTransparency = 1
+
+        local genPath = workspace:FindFirstChild("MAPS") and workspace.MAPS:FindFirstChild("GAME MAP") and workspace.MAPS["GAME MAP"]:FindFirstChild("Generators")
+        if genPath then
+            for i, obj in pairs(genPath:GetChildren()) do
+                local pos = obj:IsA("Model") and obj:GetModelCFrame() or obj.CFrame
+                makeBtn("Generator #"..i, TPPage, function()
+                    if player.Character then player.Character.HumanoidRootPart.CFrame = pos * CFrame.new(0, 5, 0) end
+                end)
+            end
         end
-        if uis:IsKeyDown(Enum.KeyCode.Space) then newCF = newCF * CFrame.new(0, fly_speed, 0)
-        elseif uis:IsKeyDown(Enum.KeyCode.LeftControl) then newCF = newCF * CFrame.new(0, -fly_speed, 0) end
-        root.CFrame = newCF
+
+        -- Player TP
+        local pLab = Instance.new("TextLabel", TPPage)
+        pLab.Size = UDim2.new(1, 0, 0, 25)
+        pLab.Text = "--- PLAYERS ---"
+        pLab.TextColor3 = Color3.fromRGB(100, 255, 150)
+        pLab.BackgroundTransparency = 1
+        for _, p in pairs(players:GetPlayers()) do
+            if p ~= player then
+                makeBtn(p.DisplayName, TPPage, function()
+                    if p.Character then player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame end
+                end)
+            end
+        end
+        TPPage.CanvasSize = UDim2.new(0, 0, 0, TPPage.UIListLayout.AbsoluteContentSize.Y + 20)
     end
 
-    -- 3. Speed 20
-    if speedOn and not flyOn then
-        if move.Magnitude > 0 then
-            root.CFrame = root.CFrame + (move * (ws_speed / 45))
-        end
-    end
+    -- สลับหน้า
+    MainTabBtn.MouseButton1Click:Connect(function()
+        MainPage.Visible = true; TPPage.Visible = false
+        MainTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); TPTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    end)
+    TPTabBtn.MouseButton1Click:Connect(function()
+        MainPage.Visible = false; TPPage.Visible = true
+        updateTPPage()
+        TPTabBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); MainTabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    end)
 
-    -- 4. Noclip
-    if noclipOn then
-        for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
+    -- ระบบควบคุมตัวละคร
+    runService.Stepped:Connect(function()
+        if not player.Character or not player.Character:FindFirstChild("Humanoid") then return end
+        if speedOn and not flyOn then player.Character.Humanoid.WalkSpeed = 17 end
+        if flyOn then
+            player.Character.Humanoid.PlatformStand = true
+            player.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+            local move = player.Character.Humanoid.MoveDirection
+            local cam = workspace.CurrentCamera.CFrame
+            if move.Magnitude > 0 then
+                player.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame:Lerp(player.Character.HumanoidRootPart.CFrame + (cam.LookVector * (move.Z * -1) * 1.6) + (cam.RightVector * move.X * 1.6), 0.5)
+            end
         end
-    end
-end)
+        if noclipOn then
+            for _, v in pairs(player.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+        end
+    end)
 
---// Player List Scanner
-local function updatePlayerList()
-    for _, v in pairs(TPFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
-    for _, p in pairs(players:GetPlayers()) do
-        if p ~= player then
-            local pBtn = Instance.new("TextButton", TPFrame)
-            pBtn.Size = UDim2.new(1, 0, 0, 25)
-            pBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            pBtn.Text = "FLY TO: " .. p.DisplayName
-            pBtn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-            pBtn.Font = Enum.Font.SourceSans
-            pBtn.BorderSizePixel = 0
-            
-            pBtn.MouseButton1Click:Connect(function()
-                if targetPlayer == p then
-                    targetPlayer = nil
-                    if player.Character then player.Character.Humanoid.PlatformStand = false end
-                else
-                    targetPlayer = p
-                end
-            end)
-        end
-    end
-    TPFrame.CanvasSize = UDim2.new(0, 0, 0, #players:GetPlayers() * 25)
+    -- ปุ่มเปิด/ปิดเมนู (G)
+    local Toggle = Instance.new("TextButton", ScreenGui)
+    Toggle.Size = UDim2.new(0, 45, 0, 45)
+    Toggle.Position = UDim2.new(0, 10, 0.5, -22)
+    Toggle.Text = "G"
+    Toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Toggle.TextColor3 = Color3.fromRGB(0, 255, 150)
+    Toggle.ZIndex = 10
+    Toggle.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 end
 
---// Button Events
-SpeedBtn.MouseButton1Click:Connect(function()
-    speedOn = not speedOn
-    SpeedBtn.Text = speedOn and "Speed (20): ON" or "Speed (20): OFF"
+--// ระบบ Key & Auto Login
+if isfile and isfile(saveFile) and readfile(saveFile) == CorrectKey then
+    buildHub()
+else
+    local KF = Instance.new("Frame", ScreenGui)
+    KF.Size = UDim2.new(0, 240, 0, 150)
+    KF.Position = UDim2.new(0.5, -120, 0.5, -75)
+    KF.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+
+    local In = Instance.new("TextBox", KF)
+    In.Size = UDim2.new(0.8, 0, 0, 35)
+    In.Position = UDim2.new(0.1, 0, 0.3, 0)
+    In.PlaceholderText = "Enter Key..."
+    
+    local Sb = Instance.new("TextButton", KF)
+    Sb.Size = UDim2.new(0.8, 0, 0, 40)
+    Sb.Position = UDim2.new(0.1, 0, 0.65, 0)
+    Sb.BackgroundColor3 = Color3.fromRGB(0, 160, 0)
+    Sb.Text = "SUBMIT"
+    Sb.TextColor3 = Color3.new(1, 1, 1)
+
+    Sb.MouseButton1Click:Connect(function()
+        if In.Text == CorrectKey then
+            if writefile then writefile(saveFile, CorrectKey) end
+            KF:Destroy(); buildHub()
+        end
+    end)
+end
