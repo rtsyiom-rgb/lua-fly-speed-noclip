@@ -49,7 +49,7 @@ NocBtn.TextColor3 = Color3.new(1, 1, 1)
 local speedOn = false
 local flyOn = false
 local noclipOn = false
-local ws_speed = 30
+local ws_speed = 20
 local fly_speed = 2
 
 runService.Heartbeat:Connect(function()
