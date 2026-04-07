@@ -1,10 +1,12 @@
 --[[ 
-    GEMINI HUB V1: THE DEFINITIVE EDITION
-    - Speed: 20 (CFrame Bypass)
-    - Fly: Smooth (Space to Up, Ctrl to Down)
-    - Noclip: Always On Logic
-    - Player Scanner: Auto-Pull Names & Click to TP
-    - GUI: Draggable & Toggleable (Press Insert to Hide)
+    GEMINI HUB V1: THE MASTER EDITION (All-in-One)
+    Features:
+    - Speed Bypass (Locked at 20)
+    - Fly Mode (Space/Ctrl)
+    - Noclip (Walk through walls)
+    - Player Scanner (Auto-update list)
+    - Fly To Player (Auto-follow targeted player)
+    Hotkeys: [Insert] to Hide UI, [Q] to Stop FlyTo
 ]]
 
 local player = game.Players.LocalPlayer
@@ -19,24 +21,23 @@ local Title = Instance.new("TextLabel", Main)
 local SpeedBtn = Instance.new("TextButton", Main)
 local FlyBtn = Instance.new("TextButton", Main)
 local NocBtn = Instance.new("TextButton", Main)
-local ListTitle = Instance.new("TextLabel", Main)
 local TPFrame = Instance.new("ScrollingFrame", Main)
 local UIList = Instance.new("UIListLayout", TPFrame)
 
---// UI Styling (Infinite Yield Style)
-Main.Name = "GeminiHub_Final"
-Main.Size = UDim2.new(0, 160, 0, 300)
-Main.Position = UDim2.new(0.5, -80, 0.5, -150)
-Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+--// UI Styling
+Main.Name = "GeminiMaster_V1"
+Main.Size = UDim2.new(0, 170, 0, 320)
+Main.Position = UDim2.new(0.5, -85, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
 
-Title.Size = UDim2.new(1, 0, 0, 25)
-Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-Title.Text = " GEMINI HUB V1 (ALL)"
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Title.Text = " GEMINI MASTER V1"
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.TextSize = 10
+Title.TextSize = 12
 Title.Font = Enum.Font.SourceSansBold
 
 local function styleBtn(btn, pos, text)
@@ -49,44 +50,45 @@ local function styleBtn(btn, pos, text)
     btn.Font = Enum.Font.SourceSans
 end
 
-styleBtn(SpeedBtn, UDim2.new(0.05, 0, 0.1, 0), "Speed (20): OFF")
-styleBtn(FlyBtn, UDim2.new(0.05, 0, 0.2, 0), "Fly: OFF")
-styleBtn(NocBtn, UDim2.new(0.05, 0, 0.3, 0), "Noclip: OFF")
+styleBtn(SpeedBtn, UDim2.new(0.05, 0, 0.12, 0), "Speed (20): OFF")
+styleBtn(FlyBtn, UDim2.new(0.05, 0, 0.22, 0), "Fly Mode: OFF")
+styleBtn(NocBtn, UDim2.new(0.05, 0, 0.32, 0), "Noclip: OFF")
 
-ListTitle.Size = UDim2.new(1, 0, 0, 20)
-ListTitle.Position = UDim2.new(0, 0, 0.4, 0)
-ListTitle.BackgroundTransparency = 1
-ListTitle.Text = "--- PLAYER SCANNER ---"
-ListTitle.TextColor3 = Color3.new(0.6, 0.6, 0.6)
-ListTitle.TextSize = 10
-
-TPFrame.Size = UDim2.new(0.9, 0, 0, 150)
-TPFrame.Position = UDim2.new(0.05, 0, 0.48, 0)
-TPFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TPFrame.Size = UDim2.new(0.9, 0, 0, 170)
+TPFrame.Position = UDim2.new(0.05, 0, 0.43, 0)
+TPFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 TPFrame.BorderSizePixel = 0
 TPFrame.ScrollBarThickness = 4
 UIList.SortOrder = Enum.SortOrder.LayoutOrder
 
---// Logic Variables
+--// Core Variables
 local speedOn, flyOn, noclipOn = false, false, false
+local targetPlayer = nil
 local ws_speed = 20
 local fly_speed = 2
+local flyTo_speed = 2.5
 
---// Heartbeat Loop (Core Logic)
+--// Core Loop (Heartbeat)
 runService.Heartbeat:Connect(function()
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
     local root = player.Character.HumanoidRootPart
     local hum = player.Character:FindFirstChildOfClass("Humanoid")
     local move = hum.MoveDirection
 
-    -- 1. Speed Bypass
-    if speedOn and not flyOn then
-        if move.Magnitude > 0 then
-            root.CFrame = root.CFrame + (move * (ws_speed / 45))
+    -- 1. Fly To Player (Priority)
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        hum.PlatformStand = true
+        root.Velocity = Vector3.new(0,0,0)
+        local tRoot = targetPlayer.Character.HumanoidRootPart
+        local dir = (tRoot.Position - root.Position).Unit
+        if (tRoot.Position - root.Position).Magnitude > 6 then
+            root.CFrame = root.CFrame + (dir * flyTo_speed)
+            root.CFrame = CFrame.lookAt(root.Position, tRoot.Position)
         end
+        return -- Skip other movement logic while FlyTo is active
     end
 
-    -- 2. Fly Bypass
+    -- 2. Fly Mode
     if flyOn then
         hum.PlatformStand = true
         root.Velocity = Vector3.new(0, 0, 0)
@@ -100,7 +102,14 @@ runService.Heartbeat:Connect(function()
         root.CFrame = newCF
     end
 
-    -- 3. Noclip
+    -- 3. Speed 20
+    if speedOn and not flyOn then
+        if move.Magnitude > 0 then
+            root.CFrame = root.CFrame + (move * (ws_speed / 45))
+        end
+    end
+
+    -- 4. Noclip
     if noclipOn then
         for _, part in pairs(player.Character:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = false end
@@ -108,27 +117,7 @@ runService.Heartbeat:Connect(function()
     end
 end)
 
---// Button Events
-SpeedBtn.MouseButton1Click:Connect(function()
-    speedOn = not speedOn
-    SpeedBtn.Text = speedOn and "Speed (20): ON" or "Speed (20): OFF"
-    SpeedBtn.TextColor3 = speedOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-end)
-
-FlyBtn.MouseButton1Click:Connect(function()
-    flyOn = not flyOn
-    FlyBtn.Text = flyOn and "Fly: ON" or "Fly: OFF"
-    FlyBtn.TextColor3 = flyOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-    if not flyOn and player.Character then player.Character.Humanoid.PlatformStand = false end
-end)
-
-NocBtn.MouseButton1Click:Connect(function()
-    noclipOn = not noclipOn
-    NocBtn.Text = noclipOn and "Noclip: ON" or "Noclip: OFF"
-    NocBtn.TextColor3 = noclipOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
-end)
-
---// Player Scanner (Auto-Pull)
+--// Player List Scanner
 local function updatePlayerList()
     for _, v in pairs(TPFrame:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
     for _, p in pairs(players:GetPlayers()) do
@@ -136,15 +125,17 @@ local function updatePlayerList()
             local pBtn = Instance.new("TextButton", TPFrame)
             pBtn.Size = UDim2.new(1, 0, 0, 25)
             pBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            pBtn.BorderSizePixel = 0
-            pBtn.Text = "TP TO: " .. p.DisplayName
+            pBtn.Text = "FLY TO: " .. p.DisplayName
             pBtn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
             pBtn.Font = Enum.Font.SourceSans
-            pBtn.TextSize = 12
+            pBtn.BorderSizePixel = 0
             
             pBtn.MouseButton1Click:Connect(function()
-                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                    player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                if targetPlayer == p then
+                    targetPlayer = nil
+                    if player.Character then player.Character.Humanoid.PlatformStand = false end
+                else
+                    targetPlayer = p
                 end
             end)
         end
@@ -152,13 +143,7 @@ local function updatePlayerList()
     TPFrame.CanvasSize = UDim2.new(0, 0, 0, #players:GetPlayers() * 25)
 end
 
-players.PlayerAdded:Connect(updatePlayerList)
-players.PlayerRemoving:Connect(updatePlayerList)
-updatePlayerList()
-
---// Hotkey Insert to Toggle UI
-uis.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.Insert then
-        Main.Visible = not Main.Visible
-    end
-end)
+--// Button Events
+SpeedBtn.MouseButton1Click:Connect(function()
+    speedOn = not speedOn
+    SpeedBtn.Text = speedOn and "Speed (20): ON" or "Speed (20): OFF"
