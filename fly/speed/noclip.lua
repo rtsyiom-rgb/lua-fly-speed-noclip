@@ -93,7 +93,7 @@ RefreshBtn.MouseButton1Click:Connect(updatePlayerList)
 
 -- ระบบ Logic (CFrame Bypass เหมือนเดิม)
 local speedOn, flyOn, noclipOn = false, false, false
-local ws_speed, fly_speed = 100, 2
+local ws_speed, fly_speed = 20, 2
 
 runService.Heartbeat:Connect(function()
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
