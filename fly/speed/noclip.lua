@@ -1,23 +1,22 @@
---// Gemini All-in-One (Speed, Fly, Noclip, Teleport)
+--// Gemini All-in-One (Speed, Fly, Noclip, Player Scanner & TP)
 local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
 local runService = game:GetService("RunService")
 local uis = game:GetService("UserInputService")
 local players = game:GetService("Players")
 
--- สร้าง UI (ปรับขนาดเพิ่มขึ้นเพื่อรองรับระบบ TP)
+-- สร้าง UI หลัก
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 local Main = Instance.new("Frame", ScreenGui)
 local Title = Instance.new("TextLabel", Main)
 local SpeedBtn = Instance.new("TextButton", Main)
 local FlyBtn = Instance.new("TextButton", Main)
 local NocBtn = Instance.new("TextButton", Main)
-local TPInput = Instance.new("TextBox", Main) -- ช่องใส่ชื่อผู้เล่น
-local TPBtn = Instance.new("TextButton", Main)  -- ปุ่มกด TP
+local TPFrame = Instance.new("ScrollingFrame", Main) -- ส่วนแสดงรายชื่อผู้เล่น
+local RefreshBtn = Instance.new("TextButton", Main) -- ปุ่มรีเฟรชรายชื่อ
 
--- ปรับแต่ง UI สไตล์ IY
-Main.Size = UDim2.new(0, 150, 0, 195) -- เพิ่มความสูงเพื่อใส่ระบบ TP
-Main.Position = UDim2.new(0.5, -75, 0.5, -97)
+-- ปรับแต่ง UI
+Main.Size = UDim2.new(0, 160, 0, 250)
+Main.Position = UDim2.new(0.5, -80, 0.5, -125)
 Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -25,54 +24,76 @@ Main.Draggable = true
 
 Title.Size = UDim2.new(1, 0, 0, 25)
 Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-Title.Text = " GEMINI HUB V1"
+Title.Text = " GEMINI HUB V1 (SCANNER)"
 Title.TextColor3 = Color3.new(1, 1, 1)
-Title.TextSize = 12
+Title.TextSize = 10
 Title.Font = Enum.Font.SourceSansBold
 
--- ปุ่ม Speed
-SpeedBtn.Size = UDim2.new(0.9, 0, 0, 25)
-SpeedBtn.Position = UDim2.new(0.05, 0, 0.16, 0)
-SpeedBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-SpeedBtn.Text = "Speed: OFF"
-SpeedBtn.TextColor3 = Color3.new(1, 1, 1)
+-- ปุ่มพื้นฐาน (Speed, Fly, Noclip)
+local function createBtn(name, pos, text)
+    local btn = Instance.new("TextButton", Main)
+    btn.Size = UDim2.new(0.9, 0, 0, 25)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSans
+    return btn
+end
 
--- ปุ่ม Fly
-FlyBtn.Size = UDim2.new(0.9, 0, 0, 25)
-FlyBtn.Position = UDim2.new(0.05, 0, 0.32, 0)
-FlyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-FlyBtn.Text = "Fly: OFF"
-FlyBtn.TextColor3 = Color3.new(1, 1, 1)
+SpeedBtn = createBtn("Speed", UDim2.new(0.05, 0, 0.12, 0), "Speed: OFF")
+FlyBtn = createBtn("Fly", UDim2.new(0.05, 0, 0.23, 0), "Fly: OFF")
+NocBtn = createBtn("Noclip", UDim2.new(0.05, 0, 0.34, 0), "Noclip: OFF")
 
--- ปุ่ม Noclip
-NocBtn.Size = UDim2.new(0.9, 0, 0, 25)
-NocBtn.Position = UDim2.new(0.05, 0, 0.48, 0)
-NocBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-NocBtn.Text = "Noclip: OFF"
-NocBtn.TextColor3 = Color3.new(1, 1, 1)
+-- ปุ่มรีเฟรชรายชื่อ
+RefreshBtn.Size = UDim2.new(0.9, 0, 0, 20)
+RefreshBtn.Position = UDim2.new(0.05, 0, 0.46, 0)
+RefreshBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+RefreshBtn.Text = "REFRESH PLAYER LIST"
+RefreshBtn.TextColor3 = Color3.new(1, 1, 1)
+RefreshBtn.TextSize = 12
 
--- ช่องใส่ชื่อผู้เล่น (TP)
-TPInput.Size = UDim2.new(0.9, 0, 0, 25)
-TPInput.Position = UDim2.new(0.05, 0, 0.64, 0)
-TPInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TPInput.PlaceholderText = "Player Name..."
-TPInput.Text = ""
-TPInput.TextColor3 = Color3.new(1, 1, 1)
-TPInput.Font = Enum.Font.SourceSans
+-- ScrollingFrame สำหรับรายชื่อผู้เล่น
+TPFrame.Size = UDim2.new(0.9, 0, 0, 100)
+TPFrame.Position = UDim2.new(0.05, 0, 0.56, 0)
+TPFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TPFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+TPFrame.ScrollBarThickness = 4
 
--- ปุ่มกด TP
-TPBtn.Size = UDim2.new(0.9, 0, 0, 25)
-TPBtn.Position = UDim2.new(0.05, 0, 0.82, 0)
-TPBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-TPBtn.Text = "TELEPORT"
-TPBtn.TextColor3 = Color3.new(1, 1, 1)
+local UIListLayout = Instance.new("UIListLayout", TPFrame)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- ระบบ Logic เดิม
-local speedOn = false
-local flyOn = false
-local noclipOn = false
-local ws_speed = 100
-local fly_speed = 2
+-- ฟังก์ชันดึงชื่อผู้เล่นและสร้างปุ่มวาร์ป
+local function updatePlayerList()
+    for _, v in pairs(TPFrame:GetChildren()) do
+        if v:IsA("TextButton") then v:Destroy() end
+    end
+    
+    for _, p in pairs(players:GetPlayers()) do
+        if p ~= player then
+            local pBtn = Instance.new("TextButton", TPFrame)
+            pBtn.Size = UDim2.new(1, 0, 0, 20)
+            pBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            pBtn.Text = p.DisplayName
+            pBtn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+            pBtn.Font = Enum.Font.SourceSans
+            pBtn.TextSize = 12
+            
+            pBtn.MouseButton1Click:Connect(function()
+                if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                end
+            end)
+        end
+    end
+    TPFrame.CanvasSize = UDim2.new(0, 0, 0, #players:GetPlayers() * 20)
+end
+
+RefreshBtn.MouseButton1Click:Connect(updatePlayerList)
+
+-- ระบบ Logic (CFrame Bypass เหมือนเดิม)
+local speedOn, flyOn, noclipOn = false, false, false
+local ws_speed, fly_speed = 100, 2
 
 runService.Heartbeat:Connect(function()
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
@@ -94,9 +115,7 @@ runService.Heartbeat:Connect(function()
     end
 
     if speedOn and not flyOn then
-        if move.Magnitude > 0 then
-            root.CFrame = root.CFrame + (move * (ws_speed / 50))
-        end
+        if move.Magnitude > 0 then root.CFrame = root.CFrame + (move * (ws_speed / 50)) end
     end
 
     if noclipOn then
@@ -106,7 +125,7 @@ runService.Heartbeat:Connect(function()
     end
 end)
 
--- ปุ่มกดต่างๆ
+-- ปุ่มสลับโหมด
 SpeedBtn.MouseButton1Click:Connect(function()
     speedOn = not speedOn
     SpeedBtn.Text = speedOn and "Speed: ON" or "Speed: OFF"
@@ -126,15 +145,4 @@ NocBtn.MouseButton1Click:Connect(function()
     NocBtn.TextColor3 = noclipOn and Color3.new(0, 1, 0) or Color3.new(1, 1, 1)
 end)
 
--- ระบบ Teleport (หาชื่อย่อได้เหมือน IY)
-TPBtn.MouseButton1Click:Connect(function()
-    local targetName = TPInput.Text:lower()
-    for _, p in pairs(players:GetPlayers()) do
-        if p.Name:lower():sub(1, #targetName) == targetName or p.DisplayName:lower():sub(1, #targetName) == targetName then
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-                break
-            end
-        end
-    end
-end)
+updatePlayerList() -- เรียกใช้ครั้งแรกเมื่อรันสคริปต์
